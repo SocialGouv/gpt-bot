@@ -13,8 +13,9 @@ export default class Mattermost {
   httpClient
   id?: string
   onMessages: (
-    messages: ChatCompletionRequestMessage[],
-    metadata: Record<string, unknown>
+    post: Record<string, unknown>,
+    history: ChatCompletionRequestMessage[],
+    message?: string
   ) => void
 
   constructor() {
@@ -55,14 +56,14 @@ export default class Mattermost {
   }
 
   async handleMessage(event: WebSocketMessage<Record<string, string>>) {
-    const id = await this.getId()
-    console.log("ID:", id)
-    console.log("EVENT:", event)
+    const botId = await this.getId()
+    // console.log("ID:", botId)
+    // console.log("EVENT:", event)
 
     if (
       event.event === "posted" &&
       event.data.mentions &&
-      JSON.parse(event.data.mentions).includes(id)
+      JSON.parse(event.data.mentions).includes(botId)
     ) {
       const post = JSON.parse(event.data.post)
       const posts = await this.getPosts(post.id)
@@ -71,7 +72,7 @@ export default class Mattermost {
         (post) =>
           ({
             content: post.message,
-            role: post.user_id === id ? "assistant" : "user",
+            role: post.user_id === botId ? "assistant" : "user",
           } as ChatCompletionRequestMessage)
       )
 
@@ -80,18 +81,13 @@ export default class Mattermost {
         root_id: post.root_id || post.id,
       }
 
-      history.unshift({
-        role: "system",
-        content: `You are a helpful Mattermost bot named ${this.bot.name} who provides succinct answers in Markdown format.
-When added to a channel, give your greetings, thank the person who added you and introduce yourself explaining what kind of help you can provide.
-Also explain that to interact with you, people must prefix their messages with ${this.bot.name}. Give a message example to interact with you,  in Markdown format.`,
-      })
+      const message = history.pop()
 
-      this.onMessages(history, metadata)
+      this.onMessages(metadata, history, message?.content)
     }
   }
 
-  async send(message: string, metadata: Record<string, unknown>) {
-    await this.httpClient.createPost({ message, ...metadata })
+  async send(message: string, post: Record<string, unknown>) {
+    await this.httpClient.createPost({ message, ...post })
   }
 }
