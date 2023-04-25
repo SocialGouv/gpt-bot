@@ -1,0 +1,14 @@
+daemon:
+  ~chart: daemon
+  envFrom:
+  - secretRef:
+      name: gpt-bot
+
+jobs:
+  runs:
+    build-app:
+      use: build
+      with:
+        imagePackage: daemon
+        # buildArgs:
+        #   COMMIT_SHA: "{{ $.Values.global.sha }}"
