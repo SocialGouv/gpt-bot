@@ -1,12 +1,13 @@
 daemon:
   ~chart: daemon
+  ~needs: [build-daemon]
   envFrom:
   - secretRef:
       name: gpt-bot
 
 jobs:
   runs:
-    build-app:
+    build-daemon:
       use: build
       with:
         imagePackage: daemon
