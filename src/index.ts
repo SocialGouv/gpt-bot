@@ -1,6 +1,7 @@
 import * as dotenv from "dotenv"
 dotenv.config()
 
+import axios from "axios"
 import { Model } from "@chewam/mozart"
 import { SearchEngine } from "@chewam/mozart/dist/tools"
 import type { ChatCompletionRequestMessage } from "openai"
@@ -104,14 +105,24 @@ mattermost.onMessages = async (
   console.log("Mattermost history:", history)
   console.log("Mattermost message:", message)
 
-  const { content: response } = await model.use({
-    message,
-    system: SYSTEM_PROMPT,
-    history,
-    // history: [...TRAINING_DATA, ...history] as ChatCompletionRequestMessage[],
-  })
-  console.log("OpenAI system:", model.prompt.system)
-  console.log("OpenAI history:", model.prompt.history)
-  console.log("OpenAI response:", response)
-  await mattermost.send(response, post)
+  try {
+    const { content: response } = await model.use({
+      message,
+      system: SYSTEM_PROMPT,
+      history,
+      // history: [...TRAINING_DATA, ...history] as ChatCompletionRequestMessage[],
+    })
+    console.log("OpenAI system:", model.prompt.system)
+    console.log("OpenAI history:", model.prompt.history)
+    console.log("OpenAI response:", response)
+    await mattermost.send(response, post)
+  } catch (error) {
+    let response = ""
+    if (axios.isAxiosError(error) && error.response) {
+      response = error.response.data.error.message
+    } else {
+      response = "Unknown error"
+    }
+    await mattermost.send(response, post)
+  }
 }
